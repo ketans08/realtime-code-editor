@@ -129,7 +129,7 @@ const EditorPage = () => {
 
         if (language === 'cpp' || language === 'c++') {
             setIsRunning(true);
-            setOutputText('Submitting to Judge0 runner (or falling back to local runner)...\n');
+            setOutputText('Submitting to Piston runner (or falling back to local runner)...\n');
             const backend = process.env.REACT_APP_BACKEND_URL || '';
 
             // helper to post and capture detailed info

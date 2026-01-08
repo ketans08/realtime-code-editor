@@ -252,8 +252,14 @@ app.post('/run-piston', async (req, res) => {
 // Serve static build only if it exists (avoids ENOENT noise during development)
 const buildIndex = path.join(__dirname, 'build', 'index.html');
 if (fs.existsSync(buildIndex)) {
+    // Serve static files, but skip API routes
     app.use(express.static('build'));
+    // SPA fallback: send index.html for non-API routes
     app.use((req, res, next) => {
+        // Skip API routes
+        if (req.path.startsWith('/run') || req.path.startsWith('/socket.io')) {
+            return next();
+        }
         res.sendFile(buildIndex);
     });
 } else {
