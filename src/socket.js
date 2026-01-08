@@ -1,7 +1,12 @@
 import { io } from 'socket.io-client';
 
 export const initSocket = async () => {
-    const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+    const getBackendUrl = () => {
+        if (process.env.REACT_APP_BACKEND_URL) return process.env.REACT_APP_BACKEND_URL;
+        if (typeof window !== 'undefined' && window.location) return window.location.origin;
+        return 'http://localhost:5000';
+    };
+    const backendUrl = getBackendUrl();
 
     const options = {
         'force new connection': true,
@@ -12,6 +17,7 @@ export const initSocket = async () => {
     };
 
     try {
+        console.log('Initializing socket to', backendUrl);
         const socket = io(backendUrl, options);
 
         socket.on('connect_error', (error) => {
