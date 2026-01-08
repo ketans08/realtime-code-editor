@@ -155,12 +155,12 @@ const EditorPage = () => {
             }
 
             try {
-                const judge0Url = `${backend}/run-judge0`;
-                const tryJudge = await doPost(judge0Url, { language: 'cpp', code, input: inputText });
-                console.log('Judge0 response details:', tryJudge);
+                const pistonUrl = `${backend}/run-piston`;
+                const tryPiston = await doPost(pistonUrl, { language, code, input: inputText });
+                console.log('Piston response details:', tryPiston);
 
-                if (tryJudge.error || !tryJudge.ok) {
-                    setOutputText((prev) => prev + `Judge0 proxy request failed: ${tryJudge.error || 'status=' + tryJudge.status} -- falling back to local runner...\n`);
+                if (tryPiston.error || !tryPiston.ok) {
+                    setOutputText((prev) => prev + `Piston request failed: ${tryPiston.error || 'status=' + tryPiston.status} -- falling back to local runner...\n`);
                     const local = await doPost(`${backend}/run`, { language: 'cpp', code, input: inputText });
                     console.log('Local runner response details:', local);
                     if (local.error) {
@@ -174,14 +174,16 @@ const EditorPage = () => {
                         setOutputText((prev) => prev + 'Local runner returned non-JSON response: ' + (local.text || '') + '\n');
                     }
                 } else {
-                    // Judge0 returned ok - print JSON or text
-                    if (tryJudge.json) {
-                        const data = tryJudge.json;
-                        if (data.compileError) setOutputText((prev) => prev + 'Compilation Error:\n' + data.compileError + '\n');
-                        else if (data.stdout || data.stderr) setOutputText((prev) => prev + (data.stdout || '') + (data.stderr ? '\n' + data.stderr : ''));
-                        else setOutputText((prev) => prev + JSON.stringify(data) + '\n');
+                    // Piston returned ok - print normalized response
+                    if (tryPiston.json) {
+                        const data = tryPiston.json;
+                        if (data.success === false) {
+                            setOutputText((prev) => prev + 'Execution Error:\n' + data.stderr + '\n');
+                        } else {
+                            setOutputText((prev) => prev + (data.stdout || '') + (data.stderr ? '\n' + data.stderr : ''));
+                        }
                     } else {
-                        setOutputText((prev) => prev + 'Judge0 returned non-JSON response: ' + (tryJudge.text || '') + '\n');
+                        setOutputText((prev) => prev + 'Piston returned non-JSON response: ' + (tryPiston.text || '') + '\n');
                     }
                 }
             } catch (err) {
