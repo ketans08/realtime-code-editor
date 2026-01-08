@@ -9,8 +9,6 @@ services:
       - "5001:5001"
     environment:
       - PORT=5001
-      - JUDGE0_SUBMISSIONS_URL=${JUDGE0_SUBMISSIONS_URL}
-      - JUDGE0_API_KEY=${JUDGE0_API_KEY}
     restart: unless-stopped
 
   frontend:
@@ -22,36 +20,3 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
-# Optional: Example Judge0 self-hosting stack (heavy; uncomment to use).
-# Official Judge0 CE requires a database and redis. This example is illustrative —
-# see Judge0 CE docs for a production-ready compose: https://github.com/judge0/judge0
-#
-# judge0-db:
-#   image: postgres:13-alpine
-#   environment:
-#     POSTGRES_DB: judge0
-#     POSTGRES_USER: judge0
-#     POSTGRES_PASSWORD: judge0
-#   volumes:
-#     - judge0-db-data:/var/lib/postgresql/data
-#
-# judge0:
-#   image: judge0/judge0:latest
-#   depends_on:
-#     - judge0-db
-#   environment:
-#     - DATABASE_URL=postgres://judge0:judge0@judge0-db:5432/judge0
-#     - REDIS_URL=redis://redis:6379
-#   ports:
-#     - '2358:2358' # example; the actual Judge0 API port may differ
-#   restart: unless-stopped
-#
-# redis:
-#   image: redis:6-alpine
-#   command: redis-server --save 60 1 --loglevel warning
-#   volumes:
-#     - redis-data:/data
-#
-#volumes:
-#  judge0-db-data:
-#  redis-data:

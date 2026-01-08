@@ -105,10 +105,6 @@ if (process.env.DISABLE_LOCAL_RUNNER === 'true') {
     });
 }
 
-// Proxy to Judge0 (hosted judge API). Configure these env vars:
-// JUDGE0_SUBMISSIONS_URL - full submissions endpoint, e.g.
-//   https://judge0-ce.p.rapidapi.com/submissions?base64_encoded=false&wait=true
-// JUDGE0_API_KEY - optional API key for the judge provider
 // Helper: call Piston (emkc.org) to execute code
 async function callPiston(language, codeOrFiles, input, version) {
     const langKey = (language || '').toLowerCase();
@@ -186,19 +182,6 @@ function normalizeExecution(engine, raw) {
         return out;
     }
 
-    // Judge0: try common fields (when using wait=true & base64_encoded=false)
-    if (raw.stdout !== undefined || raw.stderr !== undefined || raw.compile_output !== undefined) {
-        out.stdout = (raw.stdout || raw.compile_output || '') + '';
-        out.stderr = (raw.stderr || raw.compile_output || raw.message || '') + '';
-        // Judge0 may provide status or code fields
-        if (raw.status && raw.status.id != null) {
-            // status.id === 3 often means success in Judge0
-            out.success = raw.status.id === 3;
-        }
-        out.exitCode = raw.exit_code != null ? raw.exit_code : (raw.code != null ? raw.code : null);
-        return out;
-    }
-
     // Generic fallback: try to stringify
     try {
         out.stdout = JSON.stringify(raw);
@@ -248,73 +231,6 @@ app.post('/run-piston', async (req, res) => {
     } catch (err) {
         console.error('Piston execution failed:', err);
         return res.status(500).json({ error: String(err) });
-    }
-});
-app.post('/run-judge0', async (req, res) => {
-    const { language, code, input } = req.body || {};
-    if (!language || !code) return res.status(400).json({ error: 'language and code required' });
-
-    const submissionsUrl = process.env.JUDGE0_SUBMISSIONS_URL;
-    if (!submissionsUrl) {
-        return res.status(500).json({ error: 'Judge0 submissions URL not configured on server. Set JUDGE0_SUBMISSIONS_URL.' });
-    }
-
-    // Map common language names to Judge0 language_id (best-effort). Users can override by calling the judge directly.
-    const langMap = {
-        javascript: 63,
-        nodejs: 63,
-        python: 71,
-        py: 71,
-        cpp: 54,
-        'c++': 54,
-        c: 50,
-        java: 62
-    };
-
-    const language_id = langMap[language.toLowerCase()] || null;
-
-    const payload = {
-        source_code: code,
-        stdin: input || ''
-    };
-    if (language_id) payload.language_id = language_id;
-
-    try {
-        const headers = { 'Content-Type': 'application/json' };
-        if (process.env.JUDGE0_API_KEY) headers['X-RapidAPI-Key'] = process.env.JUDGE0_API_KEY;
-        if (process.env.JUDGE0_HOST) headers['X-RapidAPI-Host'] = process.env.JUDGE0_HOST;
-
-        console.log('Sending to Judge0:', submissionsUrl);
-        console.log('Headers:', { ...headers, 'X-RapidAPI-Key': '***' });
-
-        const resp = await fetch(submissionsUrl, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(payload),
-        });
-
-        if (!resp.ok) {
-            console.error('Judge0 error:', resp.status, resp.statusText);
-            const errText = await resp.text();
-            console.error('Response:', errText);
-            throw new Error(`Judge0 returned ${resp.status}`);
-        }
-
-        const data = await resp.json();
-        const normalized = normalizeExecution('judge0', data);
-        return res.json(normalized);
-    } catch (err) {
-        console.error('Judge0 request failed:', err);
-        // attempt Piston fallback
-        try {
-            const pistonRes = await callPiston(language, code, input);
-            const normalized = normalizeExecution('piston', pistonRes);
-            normalized.fallback = 'piston';
-            return res.json(normalized);
-        } catch (pErr) {
-            console.error('Piston fallback failed:', pErr);
-            return res.status(500).json({ error: String(err), pistonError: String(pErr) });
-        }
     }
 });
 
