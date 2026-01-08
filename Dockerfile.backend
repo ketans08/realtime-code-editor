@@ -1,0 +1,19 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Install production dependencies
+COPY package*.json ./
+RUN npm install --only=production
+
+# Install minimal build tools so the container can compile C/C++ (g++) when local runner is enabled
+# Note: this increases image size. For production, prefer a hosted Judge0 or separate runner.
+RUN apk add --no-cache build-base
+
+# Copy app sources
+COPY . .
+
+ENV PORT=5001
+EXPOSE 5001
+
+CMD ["node", "server.js"]
