@@ -177,10 +177,22 @@ const EditorPage = () => {
                     // Piston returned ok - print normalized response
                     const data = tryPiston.json;
                     console.log('Piston execution result:', data);
+                    console.log('stdout repr:', JSON.stringify(data.stdout), 'length:', data.stdout?.length);
+                    console.log('stderr repr:', JSON.stringify(data.stderr), 'length:', data.stderr?.length);
                     if (data.success === false) {
-                        setOutputText((prev) => prev + 'Execution Error:\n' + data.stderr + '\n');
+                        const errorOutput = 'Execution Error:\n' + data.stderr + '\n';
+                        console.log('Setting error output:', JSON.stringify(errorOutput));
+                        setOutputText((prev) => prev + errorOutput);
                     } else {
-                        setOutputText((prev) => prev + (data.stdout || '') + (data.stderr ? '\n' + data.stderr : ''));
+                        const stdout = data.stdout || '';
+                        const stderr = data.stderr ? '\n' + data.stderr : '';
+                        const fullOutput = stdout + stderr;
+                        console.log('Setting success output:', JSON.stringify(fullOutput));
+                        setOutputText((prev) => {
+                            const newVal = prev + fullOutput;
+                            console.log('Output state after append:', JSON.stringify(newVal));
+                            return newVal;
+                        });
                     }
                 } else {
                     setOutputText((prev) => prev + 'Piston returned non-JSON response: ' + (tryPiston.text || '') + '\n');
