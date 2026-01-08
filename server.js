@@ -44,64 +44,64 @@ const io = new Server(server, {
 // Endpoint to compile and run code (supports C++ server-side execution)
 // Always available as fallback when Piston fails
 app.post('/run', async (req, res) => {
-        console.log('[/run] Local C++ runner called');
-        const { language, code, input } = req.body || {};
-        if (!language || !code) {
-            return res.status(400).json({ error: 'language and code are required' });
-        }
+    console.log('[/run] Local C++ runner called');
+    const { language, code, input } = req.body || {};
+    if (!language || !code) {
+        return res.status(400).json({ error: 'language and code are required' });
+    }
 
-        if (language !== 'cpp' && language !== 'c++') {
-            return res.status(400).json({ error: 'Only C++ execution is supported server-side for now' });
-        }
+    if (language !== 'cpp' && language !== 'c++') {
+        return res.status(400).json({ error: 'Only C++ execution is supported server-side for now' });
+    }
 
-        const tmpDir = path.join(os.tmpdir(), `runner-${uuidv4()}`);
+    const tmpDir = path.join(os.tmpdir(), `runner-${uuidv4()}`);
+    try {
+        await fs.promises.mkdir(tmpDir, { recursive: true });
+        const srcPath = path.join(tmpDir, 'main.cpp');
+        const exeName = process.platform === 'win32' ? 'a.exe' : 'a.out';
+        const exePath = path.join(tmpDir, exeName);
+        await fs.promises.writeFile(srcPath, code, 'utf8');
+
+        // Compile using g++
+        const compileCmd = `g++ -std=c++17 -O2 "${srcPath}" -o "${exePath}"`;
+        const compilePromise = new Promise((resolve, reject) => {
+            exec(compileCmd, { timeout: 10000, maxBuffer: 1024 * 1024 }, (err, stdout, stderr) => {
+                if (err) return reject({ err, stdout, stderr });
+                resolve({ stdout, stderr });
+            });
+        });
+
         try {
-            await fs.promises.mkdir(tmpDir, { recursive: true });
-            const srcPath = path.join(tmpDir, 'main.cpp');
-            const exeName = process.platform === 'win32' ? 'a.exe' : 'a.out';
-            const exePath = path.join(tmpDir, exeName);
-            await fs.promises.writeFile(srcPath, code, 'utf8');
-
-            // Compile using g++
-            const compileCmd = `g++ -std=c++17 -O2 "${srcPath}" -o "${exePath}"`;
-            const compilePromise = new Promise((resolve, reject) => {
-                exec(compileCmd, { timeout: 10000, maxBuffer: 1024 * 1024 }, (err, stdout, stderr) => {
-                    if (err) return reject({ err, stdout, stderr });
-                    resolve({ stdout, stderr });
-                });
-            });
-
-            try {
-                await compilePromise;
-            } catch (cErr) {
-                // Send compilation errors
-                await fs.promises.rm(tmpDir, { recursive: true, force: true }).catch(() => { });
-                return res.json({ compileError: cErr.stderr ? String(cErr.stderr) : String(cErr) });
-            }
-
-            // Run the executable with timeout
-            const runPromise = new Promise((resolve) => {
-                const child = exec(`"${exePath}"`, { cwd: tmpDir, timeout: 5000, maxBuffer: 10 * 1024 * 1024 }, (err, stdout, stderr) => {
-                    resolve({ err, stdout, stderr });
-                });
-
-                // feed input if provided
-                if (input) {
-                    try {
-                        child.stdin.write(input);
-                        child.stdin.end();
-                    } catch (e) { }
-                }
-            });
-
-            const runResult = await runPromise;
+            await compilePromise;
+        } catch (cErr) {
+            // Send compilation errors
             await fs.promises.rm(tmpDir, { recursive: true, force: true }).catch(() => { });
-            return res.json({ stdout: runResult.stdout || '', stderr: runResult.stderr || '' });
-        } catch (err) {
-            try { await fs.promises.rm(tmpDir, { recursive: true, force: true }); } catch (e) { }
-            return res.status(500).json({ error: String(err) });
+            return res.json({ compileError: cErr.stderr ? String(cErr.stderr) : String(cErr) });
         }
-    });
+
+        // Run the executable with timeout
+        const runPromise = new Promise((resolve) => {
+            const child = exec(`"${exePath}"`, { cwd: tmpDir, timeout: 5000, maxBuffer: 10 * 1024 * 1024 }, (err, stdout, stderr) => {
+                resolve({ err, stdout, stderr });
+            });
+
+            // feed input if provided
+            if (input) {
+                try {
+                    child.stdin.write(input);
+                    child.stdin.end();
+                } catch (e) { }
+            }
+        });
+
+        const runResult = await runPromise;
+        await fs.promises.rm(tmpDir, { recursive: true, force: true }).catch(() => { });
+        return res.json({ stdout: runResult.stdout || '', stderr: runResult.stderr || '' });
+    } catch (err) {
+        try { await fs.promises.rm(tmpDir, { recursive: true, force: true }); } catch (e) { }
+        return res.status(500).json({ error: String(err) });
+    }
+});
 
 // Helper: call Piston (emkc.org) to execute code
 async function callPiston(language, codeOrFiles, input, version) {
@@ -173,8 +173,10 @@ function normalizeExecution(engine, raw) {
     if (raw.run || raw.compile) {
         const run = raw.run || {};
         const compile = raw.compile || {};
-        out.stdout = (run.stdout || compile.stdout || '') + '';
-        out.stderr = (run.stderr || run.output || compile.stderr || compile.output || '') + '';
+        // Extract stdout from either run or compile stage
+        out.stdout = run.stdout || compile.stdout || '';
+        // Extract stderr from either run or compile stage (do NOT use output field as fallback)
+        out.stderr = run.stderr || compile.stderr || '';
         out.exitCode = (run.code != null ? run.code : (compile.code != null ? compile.code : null));
         out.success = out.exitCode === 0;
         return out;
@@ -188,9 +190,10 @@ function normalizeExecution(engine, raw) {
 }
 
 // Expose a direct Piston endpoint
-app.post('/run-piston', async (req, res) => {    console.log('[/run-piston] Piston endpoint called');    const { language, code, files, input } = req.body || {};
+app.post('/run-piston', async (req, res) => {
+    console.log('[/run-piston] Piston endpoint called'); const { language, code, files, input } = req.body || {};
     let version = req.body?.version || null; // allow mutation for default assignment
-    
+
     if (!language || (!code && !files)) return res.status(400).json({ error: 'language and code/files required' });
 
     try {
