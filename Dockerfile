@@ -29,7 +29,8 @@ RUN npm ci --only=production
 
 # Copy backend code
 COPY server.js ./
-COPY Actions.js ./
+COPY src/Actions.js ./
+COPY src/socket.js ./
 
 # Copy built React app from builder
 COPY --from=builder /app/build ./build
