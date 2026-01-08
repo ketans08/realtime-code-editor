@@ -25,12 +25,11 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 
 # Install production dependencies only
-RUN npm ci --only=production
+RUN npm ci --production
 
 # Copy backend code
 COPY server.js ./
-COPY src/Actions.js ./
-COPY src/socket.js ./
+COPY src ./src
 
 # Copy built React app from builder
 COPY --from=builder /app/build ./build
