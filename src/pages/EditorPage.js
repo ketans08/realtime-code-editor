@@ -158,8 +158,10 @@ const EditorPage = () => {
                 const pistonUrl = `${backend}/run-piston`;
                 const tryPiston = await doPost(pistonUrl, { language, code, input: inputText });
                 console.log('Piston response details:', tryPiston);
+                console.log('Piston status:', tryPiston.status, 'ok:', tryPiston.ok, 'error:', tryPiston.error);
 
                 if (tryPiston.error || !tryPiston.ok) {
+                    console.log('Piston failed, falling back to /run');
                     setOutputText((prev) => prev + `Piston request failed: ${tryPiston.error || 'status=' + tryPiston.status} -- falling back to local runner...\n`);
                     const local = await doPost(`${backend}/run`, { language: 'cpp', code, input: inputText });
                     console.log('Local runner response details:', local);
