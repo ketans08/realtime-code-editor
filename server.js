@@ -239,7 +239,9 @@ app.post('/run-piston', async (req, res) => {    console.log('[/run-piston] Pist
 
         console.log('Sending to Piston:', JSON.stringify(pistonPayload, null, 2));
         const result = await callPiston(langKey, filesPayload, input, version);
+        console.log('Raw Piston response:', JSON.stringify(result, null, 2));
         const normalized = normalizeExecution('piston', result);
+        console.log('Normalized response:', JSON.stringify(normalized, null, 2));
         return res.json(normalized);
     } catch (err) {
         console.error('Piston execution failed:', err);
