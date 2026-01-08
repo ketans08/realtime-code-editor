@@ -1,16 +1,45 @@
-# Root Dockerfile for Render deployment
-# This orchestrates docker-compose for backend + frontend
-FROM docker:24-dind
+# Build stage for React frontend
+FROM node:18-alpine AS builder
 
-# Install docker-compose
-RUN apk add --no-cache docker-compose
-
-# Copy project files
 WORKDIR /app
-COPY . .
 
-# Expose ports
-EXPOSE 3000 5001
+# Copy package files
+COPY package.json package-lock.json ./
 
-# Start services
-CMD ["docker-compose", "up", "--build"]
+# Install dependencies
+RUN npm ci
+
+# Copy source
+COPY public ./public
+COPY src ./src
+
+# Build React
+RUN npm run build
+
+# Production stage
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY package.json package-lock.json ./
+
+# Install production dependencies only
+RUN npm ci --only=production
+
+# Copy backend code
+COPY server.js ./
+COPY Actions.js ./
+
+# Copy built React app from builder
+COPY --from=builder /app/build ./build
+
+# Expose port
+EXPOSE 5001
+
+# Set environment
+ENV NODE_ENV=production
+ENV PORT=5001
+
+# Start server
+CMD ["node", "server.js"]
