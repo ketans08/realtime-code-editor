@@ -217,15 +217,29 @@ app.post('/run-piston', async (req, res) => {
             return res.status(400).json({ error: 'code must be string or files must be array' });
         }
 
+        // ensure piston uses a concrete runtime version for some languages (e.g. cpp)
+        const langKey = (language || '').toLowerCase().replace('c++', 'cpp');
+        if (!version) {
+            // default versions for languages that don't accept 'latest'
+            const defaultVersions = {
+                cpp: '10.2.0',
+                'c++': '10.2.0',
+                python: '3.10.0',
+                javascript: '18.15.0',
+                nodejs: '18.15.0'
+            };
+            version = defaultVersions[langKey] || 'latest';
+        }
+
         const pistonPayload = {
-            language: language.toLowerCase().replace('c++', 'cpp'),
-            version: version || 'latest',
+            language: langKey || 'text',
+            version,
             files: filesPayload,
             stdin: input || ''
         };
 
         console.log('Sending to Piston:', JSON.stringify(pistonPayload, null, 2));
-        const result = await callPiston(language, filesPayload, input, version);
+        const result = await callPiston(langKey, filesPayload, input, version);
         const normalized = normalizeExecution('piston', result);
         return res.json(normalized);
     } catch (err) {
