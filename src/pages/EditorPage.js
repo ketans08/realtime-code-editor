@@ -173,18 +173,17 @@ const EditorPage = () => {
                     } else {
                         setOutputText((prev) => prev + 'Local runner returned non-JSON response: ' + (local.text || '') + '\n');
                     }
-                } else {
+                } else if (tryPiston.json) {
                     // Piston returned ok - print normalized response
-                    if (tryPiston.json) {
-                        const data = tryPiston.json;
-                        if (data.success === false) {
-                            setOutputText((prev) => prev + 'Execution Error:\n' + data.stderr + '\n');
-                        } else {
-                            setOutputText((prev) => prev + (data.stdout || '') + (data.stderr ? '\n' + data.stderr : ''));
-                        }
+                    const data = tryPiston.json;
+                    console.log('Piston execution result:', data);
+                    if (data.success === false) {
+                        setOutputText((prev) => prev + 'Execution Error:\n' + data.stderr + '\n');
                     } else {
-                        setOutputText((prev) => prev + 'Piston returned non-JSON response: ' + (tryPiston.text || '') + '\n');
+                        setOutputText((prev) => prev + (data.stdout || '') + (data.stderr ? '\n' + data.stderr : ''));
                     }
+                } else {
+                    setOutputText((prev) => prev + 'Piston returned non-JSON response: ' + (tryPiston.text || '') + '\n');
                 }
             } catch (err) {
                 setOutputText((prev) => prev + 'Unexpected error: ' + String(err) + '\n');

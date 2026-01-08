@@ -44,6 +44,7 @@ const io = new Server(server, {
 // Endpoint to compile and run code (supports C++ server-side execution)
 // Always available as fallback when Piston fails
 app.post('/run', async (req, res) => {
+        console.log('[/run] Local C++ runner called');
         const { language, code, input } = req.body || {};
         if (!language || !code) {
             return res.status(400).json({ error: 'language and code are required' });
@@ -187,8 +188,7 @@ function normalizeExecution(engine, raw) {
 }
 
 // Expose a direct Piston endpoint
-app.post('/run-piston', async (req, res) => {
-    const { language, code, files, input } = req.body || {};
+app.post('/run-piston', async (req, res) => {    console.log('[/run-piston] Piston endpoint called');    const { language, code, files, input } = req.body || {};
     let version = req.body?.version || null; // allow mutation for default assignment
     
     if (!language || (!code && !files)) return res.status(400).json({ error: 'language and code/files required' });
