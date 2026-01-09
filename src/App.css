@@ -92,6 +92,8 @@ footer a:hover {
 .mainWrap {
   display: grid;
   grid-template-columns: 230px 1fr;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .aside {
@@ -100,9 +102,15 @@ footer a:hover {
   color: #fff;
   display: flex;
   flex-direction: column;
+  height: 100%;
 }
 .asideInner {
   flex: 1;
+}
+
+.copyBtn {
+  margin-top: auto;
+  margin-bottom: 10px;
 }
 
 .clientsList {
@@ -134,6 +142,7 @@ footer a:hover {
 .leaveBtn {
   width: 100%;
   margin-top: 20px;
+  margin-bottom: 20px;
 }
 
 .languageSelector {
@@ -143,6 +152,7 @@ footer a:hover {
   padding: 10px 20px;
   background: #1e1f2b;
   border-bottom: 1px solid #424242;
+  flex-shrink: 0;
 }
 
 .languageSelector label {
@@ -179,6 +189,13 @@ footer a:hover {
   color: #fff;
 }
 
+.editorWrap {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
 /* Editor controls and IO panel */
 .editorControls {
   display: flex;
@@ -186,6 +203,7 @@ footer a:hover {
   padding: 12px 20px;
   background: #1e1f2b;
   border-bottom: 1px solid #424242;
+  flex-shrink: 0;
 }
 
 .runBtn {
@@ -209,6 +227,18 @@ footer a:hover {
   padding: 12px 20px;
   background: #101116;
   border-top: 1px solid #27293a;
+  margin-top: auto;
+  margin-bottom: 0;
+  flex-shrink: 0;
+}
+
+#realtimeEditor {
+  flex: 1;
+}
+
+.CodeMirror {
+  flex: 1;
+  height: 100% !important;
 }
 .ioSection {
   flex: 1;

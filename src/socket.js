@@ -4,7 +4,7 @@ export const initSocket = async () => {
     const getBackendUrl = () => {
         if (process.env.REACT_APP_BACKEND_URL) return process.env.REACT_APP_BACKEND_URL;
         if (typeof window !== 'undefined' && window.location) return window.location.origin;
-        return 'http://localhost:5000';
+        return 'http://localhost:5001';
     };
     const backendUrl = getBackendUrl();
 

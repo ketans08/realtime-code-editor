@@ -207,6 +207,54 @@ const EditorPage = () => {
             return;
         }
 
+        if (language === 'python') {
+            setIsRunning(true);
+            setOutputText('Submitting to Piston runner...\n');
+            const backend = process.env.REACT_APP_BACKEND_URL || '';
+
+            async function doPost(url, body) {
+                const details = { url, request: body, status: null, ok: false, json: null, text: null, error: null };
+                try {
+                    const resp = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(body),
+                    });
+                    details.status = resp.status;
+                    details.ok = resp.ok;
+                    try { details.json = await resp.clone().json(); } catch (e) { details.json = null; }
+                    try { details.text = await resp.clone().text(); } catch (e) { details.text = null; }
+                    return details;
+                } catch (err) {
+                    details.error = String(err);
+                    return details;
+                }
+            }
+
+            try {
+                const pistonUrl = `${backend}/run-piston`;
+                const tryPiston = await doPost(pistonUrl, { language, code, input: inputText });
+
+                if (tryPiston.error || !tryPiston.ok) {
+                    setOutputText((prev) => prev + `Piston request failed: ${tryPiston.error || 'status=' + tryPiston.status}\n`);
+                } else if (tryPiston.json) {
+                    const data = tryPiston.json;
+                    if (data.success === false) {
+                        setOutputText((prev) => prev + 'Execution Error:\n' + (data.stderr || '') + '\n');
+                    } else {
+                        setOutputText((prev) => prev + (data.stdout || '') + (data.stderr ? '\n' + data.stderr : ''));
+                    }
+                } else {
+                    setOutputText((prev) => prev + 'Piston returned non-JSON response: ' + (tryPiston.text || '') + '\n');
+                }
+            } catch (err) {
+                setOutputText((prev) => prev + 'Unexpected error: ' + String(err) + '\n');
+            } finally {
+                setIsRunning(false);
+            }
+            return;
+        }
+
         if (language !== 'javascript') {
             setOutputText(
                 'Execution for this language is not supported in-browser. Use a server-side runner.'
